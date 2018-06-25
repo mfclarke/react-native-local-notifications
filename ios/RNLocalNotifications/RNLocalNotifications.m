@@ -80,6 +80,7 @@ RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSStr
     case 6:
       return NSCalendarUnitYear;
     default:
+      return 0;
       break;
   }
 }
