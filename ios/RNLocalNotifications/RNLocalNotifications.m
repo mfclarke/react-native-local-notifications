@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 #import "RCTBridgeModule.h"
-
+@import UserNotifications;
 
 @interface RNLocalNotifications : NSObject <RCTBridgeModule>
 @end
@@ -9,19 +9,33 @@
 
 RCT_EXPORT_MODULE();
 
-RCT_EXPORT_METHOD(createNotification:(NSInteger *)id text:(NSString *)text datetime:(NSString *)datetime sound:(NSString *)sound hiddendata:(NSString *)hiddendata repeatInterval:(NSInteger)repeatInterval)
+RCT_REMAP_METHOD(requestAuthorization,
+                 requestAuthorizationWithResolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
 {
-    [self createAlarm:id text:text datetime:datetime sound:sound update:FALSE hiddendata:(NSString *)hiddendata repeatInterval:repeatInterval];
+  UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+  [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionSound | UNAuthorizationOptionBadge) completionHandler:^(BOOL granted, NSError * _Nullable error) {
+    if (granted) {
+      resolve(Nil);
+    } else {
+      reject(@"permission_rejected", @"User rejected notifications", error);
+    }
+  }];
+}
+
+RCT_EXPORT_METHOD(createNotification:(NSInteger)identifier text:(NSString *)text datetime:(NSString *)datetime sound:(NSString *)sound hiddendata:(NSString *)hiddendata repeatIntervalType:(NSInteger)repeatIntervalType)
+{
+    [self createAlarm:identifier text:text datetime:datetime sound:sound update:FALSE hiddendata:(NSString *)hiddendata repeatIntervalType:repeatIntervalType];
 };
 
-RCT_EXPORT_METHOD(deleteNotification:(NSInteger *)id)
+RCT_EXPORT_METHOD(deleteNotification:(NSInteger)identifier)
 {
-    [self deleteAlarm:id];
+    [self deleteAlarm:identifier];
 };
 
-RCT_EXPORT_METHOD(updateNotification:(NSInteger *)id text:(NSString *)text datetime:(NSString *)datetime sound:(NSString *)sound hiddendata:(NSString *)hiddendata repeatInterval:(NSInteger)repeatInterval)
+RCT_EXPORT_METHOD(updateNotification:(NSInteger)identifier text:(NSString *)text datetime:(NSString *)datetime sound:(NSString *)sound hiddendata:(NSString *)hiddendata repeatIntervalType:(NSInteger)repeatIntervalType)
 {
-    [self createAlarm:id text:text datetime:datetime sound:sound update:TRUE hiddendata:(NSString *)hiddendata repeatInterval:repeatInterval];
+    [self createAlarm:identifier text:text datetime:datetime sound:sound update:YES hiddendata:(NSString *)hiddendata repeatIntervalType:repeatIntervalType];
 };
 
 RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSString *)largeIconType smallIconName:(NSString *)smallIconName smallIconType:(NSString *)smallIconType)
@@ -29,40 +43,44 @@ RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSStr
     //Do nothing
 };
 
-- (void)createAlarm:(NSInteger)id text:(NSString *)text datetime:(NSString *)datetime sound:(NSString *)sound update:(Boolean *)update hiddendata:(NSString *)hiddendata repeatInterval:(NSInteger)repeatInterval {
-    if(update){
-        [self deleteAlarm:id];
+- (void)createAlarm:(NSInteger)identifier text:(NSString *)text datetime:(NSString *)datetime sound:(NSString *)sound update:(BOOL)update hiddendata:(NSString *)hiddendata repeatIntervalType:(NSInteger)repeatIntervalType {
+  if(update){
+      [self deleteAlarm:identifier];
+  }
+  NSDateFormatter *dateFormat = [[NSDateFormatter alloc] init];
+  [dateFormat setDateFormat:@"yyyy-MM-dd HH:mm"];
+  NSDate *fireDate = [dateFormat dateFromString:datetime];
+  if ([[NSDate date]compare: fireDate] == NSOrderedAscending) {
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    
+    UNMutableNotificationContent *content = [UNMutableNotificationContent new];
+    content.body = text;
+    if([sound isEqualToString:@"default"]){
+      content.sound = [UNNotificationSound defaultSound];
     }
-    NSDateFormatter *dateFormat = [[NSDateFormatter alloc] init];
-    [dateFormat setDateFormat:@"yyyy-MM-dd HH:mm"];
-    NSDate *fireDate = [dateFormat dateFromString:datetime];
-    if ([[NSDate date]compare: fireDate] == NSOrderedAscending) { //only schedule items in the future!
-        UILocalNotification *notification = [[UILocalNotification alloc] init];
-        notification.fireDate = fireDate;
-        if([sound isEqualToString:@"default"] && ![sound isEqualToString:@"silence"]){
-            notification.soundName = UILocalNotificationDefaultSoundName;
-        }
-        else if([sound isEqualToString:@"silence"]){
-            notification.soundName = @"silence.caf";
-        }
-        else {
-            notification.soundName = [NSString stringWithFormat:@"%@.caf", sound];
-        }
-        notification.timeZone = [NSTimeZone defaultTimeZone];
-        notification.repeatInterval = [self calendarUnitFromInterval: repeatInterval];
-        notification.alertBody = text;
-        notification.alertAction = @"Open";
-        NSMutableDictionary *md = [[NSMutableDictionary alloc] init];
-        [md setValue:[NSNumber numberWithInteger:id] forKey:@"id"];
-        [md setValue:text forKey:@"text"];
-        [md setValue:datetime forKey:@"datetime"];
-        [md setValue:sound forKey:@"sound"];
-        [md setValue:hiddendata forKey:@"hiddendata"];
-        notification.userInfo = md;
-        dispatch_async(dispatch_get_main_queue(), ^{
-          [[UIApplication sharedApplication] scheduleLocalNotification:notification];
-        });
+    else if([sound isEqualToString:@"silence"]){
+      content.sound = [UNNotificationSound soundNamed:@"silence.caf"];
     }
+    else {
+      content.sound = [UNNotificationSound soundNamed:[NSString stringWithFormat:@"%@.caf", sound]];
+    }
+    content.sound = [UNNotificationSound defaultSound];
+    NSMutableDictionary *md = [[NSMutableDictionary alloc] init];
+    [md setValue:[NSNumber numberWithInteger:identifier] forKey:@"id"];
+    [md setValue:text forKey:@"text"];
+    [md setValue:datetime forKey:@"datetime"];
+    [md setValue:sound forKey:@"sound"];
+    [md setValue:hiddendata forKey:@"hiddendata"];
+    content.userInfo = md;
+    
+    NSDateComponents *comps = [self componentsFromIntervalType:repeatIntervalType forDate:fireDate];
+    UNNotificationTrigger *trigger = [UNCalendarNotificationTrigger triggerWithDateMatchingComponents:comps repeats:(repeatIntervalType != 0)];
+    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:@(identifier).stringValue content:content trigger:trigger];
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [center addNotificationRequest:request withCompletionHandler:nil];
+    });
+  }
 }
 
 - (NSCalendarUnit)calendarUnitFromInterval:(NSInteger)interval {
@@ -87,15 +105,32 @@ RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSStr
   }
 }
 
-- (void)deleteAlarm:(NSInteger)id {
-    NSCalendar *calendar = [NSCalendar currentCalendar];
-    NSInteger comps = (NSDayCalendarUnit | NSMonthCalendarUnit | NSYearCalendarUnit);
-    for (UILocalNotification * notification in [[UIApplication sharedApplication] scheduledLocalNotifications]) {
-        NSMutableDictionary *md = [notification userInfo];
-        if ([[md valueForKey:@"id"] integerValue] == [[NSNumber numberWithInteger:id] integerValue]) {
-            [[UIApplication sharedApplication] cancelLocalNotification:notification];
-        }
-    }
+- (NSDateComponents *)componentsFromIntervalType:(NSInteger)intervalType forDate:(NSDate *)date {
+  NSCalendar *gregorian = [[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
+  switch (intervalType) {
+    case 0: // Don't repeat
+      return [gregorian components:(NSCalendarUnitYear | NSCalendarUnitMonth | NSCalendarUnitDay | NSCalendarUnitHour | NSCalendarUnitMinute) fromDate:date];
+    case 1:
+      return [gregorian components:(NSCalendarUnitSecond) fromDate:date];
+    case 2:
+      return [gregorian components:(NSCalendarUnitMinute | NSCalendarUnitSecond) fromDate:date];
+    case 3:
+      return [gregorian components:(NSCalendarUnitHour | NSCalendarUnitMinute) fromDate:date];
+    case 4:
+      return [gregorian components:(NSCalendarUnitWeekday | NSCalendarUnitHour | NSCalendarUnitMinute) fromDate:date];
+    case 5:
+      return [gregorian components:(NSCalendarUnitDay | NSCalendarUnitHour | NSCalendarUnitMinute) fromDate:date];
+    case 6:
+      return [gregorian components:(NSCalendarUnitMonth | NSCalendarUnitDay | NSCalendarUnitHour | NSCalendarUnitMinute) fromDate:date];
+    default:
+      return 0;
+      break;
+  }
+}
+
+- (void)deleteAlarm:(NSInteger)identifier {
+  UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+  [center removePendingNotificationRequestsWithIdentifiers:@[@(identifier).stringValue]];
 }
 
 @end
