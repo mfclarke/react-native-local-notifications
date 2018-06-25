@@ -35,8 +35,8 @@ public class RNLocalNotificationsModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void createNotification(Integer id, String text, String datetime, String sound, String hiddendata) {
-        this.createAlarm(id, text, datetime, sound, false, hiddendata);
+    public void createNotification(Integer id, String text, String datetime, String sound, String hiddendata, Integer repeatInterval) {
+        this.createAlarm(id, text, datetime, sound, false, hiddendata, repeatInterval);
     }
 
     @ReactMethod
@@ -45,8 +45,8 @@ public class RNLocalNotificationsModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void updateNotification(Integer id, String text, String datetime, String sound, String hiddendata) {
-        this.createAlarm(id, text, datetime, sound, true, hiddendata);
+    public void updateNotification(Integer id, String text, String datetime, String sound, String hiddendata, Integer repeatInterval) {
+        this.createAlarm(id, text, datetime, sound, true, hiddendata, repeatInterval);
     }
 
     @ReactMethod
@@ -57,7 +57,7 @@ public class RNLocalNotificationsModule extends ReactContextBaseJavaModule {
         smallIconType = smallIconTypeNew;
     }
 
-    public void createAlarm(Integer id, String text, String datetime, String sound, boolean update, String hiddendata) {
+    public void createAlarm(Integer id, String text, String datetime, String sound, boolean update, String hiddendata, Integer repeatInterval) {
         if(update){
             this.deleteAlarm(id);
         }
@@ -86,9 +86,33 @@ public class RNLocalNotificationsModule extends ReactContextBaseJavaModule {
 
         PendingIntent mAlarmSender = PendingIntent.getBroadcast(reactContext, id, intent, 0);
 
+        Integer interval;
+        switch (repeatInterval) {
+            case 0:  interval = 0;
+                     break;
+            case 1:  interval = AlarmManager.INTERVAL_FIFTEEN_MINUTES / 15;
+                     break;
+            case 2:  interval = AlarmManager.INTERVAL_HOUR;
+                     break;
+            case 3:  interval = AlarmManager.INTERVAL_DAY;
+                     break;
+            case 4:  interval = AlarmManager.INTERVAL_DAY * 7;
+                     break;
+            case 4:  interval = AlarmManager.INTERVAL_DAY * 30;  // Warning: inexact month
+                     break;
+            case 5:  interval = AlarmManager.INTERVAL_DAY * 365;
+                     break;
+            default: interval = 0;
+                     break;
+        }
+
         Calendar date = Calendar.getInstance();
         if(timeInMillis > date.getTimeInMillis()) {
-            alarmManager.set(AlarmManager.RTC_WAKEUP, timeInMillis, mAlarmSender);
+            if(interval == 0) {
+                alarmManager.set(AlarmManager.RTC_WAKEUP, timeInMillis, mAlarmSender);
+            } else {
+                alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, timeInMillis, interval, mAlarmSender);
+            }
         }
     }
 
