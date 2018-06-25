@@ -59,7 +59,9 @@ RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSStr
         [md setValue:sound forKey:@"sound"];
         [md setValue:hiddendata forKey:@"hiddendata"];
         notification.userInfo = md;
-        [[UIApplication sharedApplication] scheduleLocalNotification:notification];
+        dispatch_async(dispatch_get_main_queue(), ^{
+          [[UIApplication sharedApplication] scheduleLocalNotification:notification];
+        });
     }
 }
 
