@@ -35,6 +35,11 @@ public class RNLocalNotificationsModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
+    public void requestAuthorization() {
+        // Do nothing - only required for iOS
+    }
+
+    @ReactMethod
     public void createNotification(Integer id, String text, String datetime, String sound, String hiddendata, Integer repeatInterval) {
         this.createAlarm(id, text, datetime, sound, false, hiddendata, repeatInterval);
     }
