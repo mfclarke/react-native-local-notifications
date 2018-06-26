@@ -7,6 +7,11 @@
 
 @implementation RNLocalNotifications
 
+- (dispatch_queue_t)methodQueue
+{
+  return dispatch_get_main_queue();
+}
+
 RCT_EXPORT_MODULE();
 
 RCT_REMAP_METHOD(requestAuthorization,
@@ -77,9 +82,7 @@ RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSStr
     UNNotificationTrigger *trigger = [UNCalendarNotificationTrigger triggerWithDateMatchingComponents:comps repeats:(repeatIntervalType != 0)];
     UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:@(identifier).stringValue content:content trigger:trigger];
     
-    dispatch_async(dispatch_get_main_queue(), ^{
-      [center addNotificationRequest:request withCompletionHandler:nil];
-    });
+    [center addNotificationRequest:request withCompletionHandler:nil];
   }
 }
 

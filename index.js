@@ -1,6 +1,9 @@
 import {NativeModules} from 'react-native';
 
 var RNLocalNotifications = {
+  requestAuthorization() {
+        NativeModules.RNLocalNotifications.requestAuthorization(resolve, reject)
+  },
   createNotification: function(id, text, datetime, sound, hiddendata='', repeatInterval) {
         NativeModules.RNLocalNotifications.createNotification(id, text, datetime, sound, hiddendata, repeatInterval);
   },
