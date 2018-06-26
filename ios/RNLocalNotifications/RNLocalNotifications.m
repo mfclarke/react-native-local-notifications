@@ -1,16 +1,14 @@
 #import <UIKit/UIKit.h>
 #import "RCTBridgeModule.h"
+#import "RCTEventEmitter.h"
 @import UserNotifications;
 
-@interface RNLocalNotifications : NSObject <RCTBridgeModule>
+@interface RNLocalNotifications : RCTEventEmitter <RCTBridgeModule>
 @end
 
 @implementation RNLocalNotifications
 
-- (dispatch_queue_t)methodQueue
-{
-  return dispatch_get_main_queue();
-}
+bool hasListeners;
 
 RCT_EXPORT_MODULE();
 
@@ -83,6 +81,31 @@ RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSStr
     UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:@(identifier).stringValue content:content trigger:trigger];
     
     [center addNotificationRequest:request withCompletionHandler:nil];
+  }
+}
+
+- (dispatch_queue_t)methodQueue
+{
+  return dispatch_get_main_queue();
+}
+
+-(void)startObserving {
+  hasListeners = YES;
+}
+
+-(void)stopObserving {
+  hasListeners = NO;
+}
+
+- (NSArray<NSString *> *)supportedEvents
+{
+  return @[@"AlertOpened"];
+}
+
+- (void)alertOpenedWithHiddendata:(NSString *)hiddendata
+{
+  if (hasListeners) {
+    [self sendEventWithName:@"AlertOpened" body:@{"hiddendata": hiddendata}];
   }
 }
 
