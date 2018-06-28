@@ -25,6 +25,7 @@
 /* Begin PBXFileReference section */
 		15209BEF1D250F63000D0F44 /* libRNLocalNotifications.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libRNLocalNotifications.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF75E3F71E2FBEDC005136CC /* RNLocalNotifications.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RNLocalNotifications.m; path = RNLocalNotifications/RNLocalNotifications.m; sourceTree = SOURCE_ROOT; };
+		F1E7297020E43D42003D4A14 /* RNLocalNotifications.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RNLocalNotifications.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +42,7 @@
 		15209BF01D250F63000D0F44 /* RNLocalNotifications */ = {
 			isa = PBXGroup;
 			children = (
+				F1E7297020E43D42003D4A14 /* RNLocalNotifications.h */,
 				AF75E3F71E2FBEDC005136CC /* RNLocalNotifications.m */,
 			);
 			path = RNLocalNotifications;

@@ -1,14 +1,7 @@
 #import <UIKit/UIKit.h>
-#import "RCTBridgeModule.h"
-#import "RCTEventEmitter.h"
-@import UserNotifications;
-
-@interface RNLocalNotifications : RCTEventEmitter <RCTBridgeModule>
-@end
+#import "RNLocalNotifications.h"
 
 @implementation RNLocalNotifications
-
-bool hasListeners;
 
 RCT_EXPORT_MODULE();
 
@@ -89,26 +82,6 @@ RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSStr
   return dispatch_get_main_queue();
 }
 
--(void)startObserving {
-  hasListeners = YES;
-}
-
--(void)stopObserving {
-  hasListeners = NO;
-}
-
-- (NSArray<NSString *> *)supportedEvents
-{
-  return @[@"AlertOpened"];
-}
-
-- (void)alertOpenedWithHiddendata:(NSString *)hiddendata
-{
-  if (hasListeners) {
-    [self sendEventWithName:@"AlertOpened" body:@{"hiddendata": hiddendata}];
-  }
-}
-
 - (NSCalendarUnit)calendarUnitFromInterval:(NSInteger)interval {
   switch (interval) {
     case 0:
@@ -157,6 +130,42 @@ RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSStr
 - (void)deleteAlarm:(NSInteger)identifier {
   UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
   [center removePendingNotificationRequestsWithIdentifiers:@[@(identifier).stringValue]];
+}
+
+// MARK: UNUserNotificationCenterDelegate
+
+bool hasListeners;
+
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification:(UNNotification *)notification withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
+  completionHandler((UNNotificationPresentationOptionAlert | UNNotificationPresentationOptionSound));
+}
+
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)(void))completionHandler {
+  if ([response.actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
+    [self alertOpenedWithHiddendata:[response.notification.request.content.userInfo valueForKey:@"hiddendata"]];
+  }
+  
+  completionHandler();
+}
+
+-(void)startObserving {
+  hasListeners = YES;
+}
+
+-(void)stopObserving {
+  hasListeners = NO;
+}
+
+- (NSArray<NSString *> *)supportedEvents
+{
+  return @[@"AlertOpened"];
+}
+
+- (void)alertOpenedWithHiddendata:(NSString *)hiddendata
+{
+  if (hasListeners) {
+    [self sendEventWithName:@"AlertOpened" body:@{@"hiddendata": hiddendata}];
+  }
 }
 
 @end
