@@ -39,3 +39,5 @@ jspm_packages
 android/build
 
 *.DS_Store
+
+xcuserdata

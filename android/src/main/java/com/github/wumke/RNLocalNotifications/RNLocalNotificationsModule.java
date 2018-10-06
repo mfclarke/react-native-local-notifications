@@ -8,6 +8,7 @@ import android.util.Log;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.Promise;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -29,14 +30,16 @@ public class RNLocalNotificationsModule extends ReactContextBaseJavaModule {
         alarmManager = (AlarmManager) reactContext.getSystemService(Context.ALARM_SERVICE);
     }
 
+
     @Override
     public String getName() {
         return "RNLocalNotifications";
     }
 
     @ReactMethod
-    public void requestAuthorization() {
-        // Do nothing - only required for iOS
+    public void requestAuthorization(Promise promise) {
+      // Do nothing - only required for iOS
+      promise.resolve("");
     }
 
     @ReactMethod
@@ -91,7 +94,7 @@ public class RNLocalNotificationsModule extends ReactContextBaseJavaModule {
 
         PendingIntent mAlarmSender = PendingIntent.getBroadcast(reactContext, id, intent, 0);
 
-        Integer interval;
+        long interval;
         switch (repeatInterval) {
             case 0:  interval = 0;
                      break;
@@ -103,9 +106,9 @@ public class RNLocalNotificationsModule extends ReactContextBaseJavaModule {
                      break;
             case 4:  interval = AlarmManager.INTERVAL_DAY * 7;
                      break;
-            case 4:  interval = AlarmManager.INTERVAL_DAY * 30;  // Warning: inexact month
+            case 5:  interval = AlarmManager.INTERVAL_DAY * 30;  // Warning: inexact month
                      break;
-            case 5:  interval = AlarmManager.INTERVAL_DAY * 365;
+            case 6:  interval = AlarmManager.INTERVAL_DAY * 365;
                      break;
             default: interval = 0;
                      break;
