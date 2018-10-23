@@ -5,6 +5,20 @@
 
 RCT_EXPORT_MODULE();
 
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(notificationOpened:) name:@"NotificationOpened" object:nil];
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
 RCT_REMAP_METHOD(requestAuthorization,
                  requestAuthorizationWithResolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject)
@@ -136,16 +150,8 @@ RCT_EXPORT_METHOD(setAndroidIcons:(NSString *)largeIconName largeIconType:(NSStr
 
 bool hasListeners;
 
-- (void)userNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification:(UNNotification *)notification withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
-  completionHandler((UNNotificationPresentationOptionAlert | UNNotificationPresentationOptionSound));
-}
-
-- (void)userNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)(void))completionHandler {
-  if ([response.actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
-    [self alertOpenedWithHiddendata:[response.notification.request.content.userInfo valueForKey:@"hiddendata"]];
-  }
-  
-  completionHandler();
+- (void)notificationOpened:(NSNotification *)notification {
+    [self alertOpenedWithHiddendata:[notification.userInfo valueForKey:@"hiddendata"]];
 }
 
 -(void)startObserving {
